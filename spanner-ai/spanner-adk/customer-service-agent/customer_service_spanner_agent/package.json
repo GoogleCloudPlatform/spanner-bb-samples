@@ -56,7 +56,7 @@
     "picomatch@<3": "2.3.2",
     "picomatch@>=4 <5": "4.0.4",
     "postcss": "8.5.10",
-    "js-yaml": "4.2.0",
+    "js-yaml": "4.3.1",
     "@babel/core": "7.29.7"
   }
 }
