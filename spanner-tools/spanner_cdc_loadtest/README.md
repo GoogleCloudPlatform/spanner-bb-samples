@@ -178,8 +178,11 @@ Build the container image using Cloud Build:
 gcloud builds submit --tag ${IMAGE_NAME}
 ```
 
-### 4. Create the Job
-Create the Cloud Run Job. Note the `--args` syntax requires a single comma-separated string.
+### 4. Create the Job Template
+Create the Cloud Run Job. This registers the job definition, compute resources, and **default CLI arguments** for the load generator.
+
+> [!NOTE]
+> `gcloud run jobs create` only registers the job template; it does **not** start any containers or run the load test yet. The `--args` provided here become the **default configuration** used by executions unless overridden. Note the `--args` syntax requires a single comma-separated string without spaces.
 
 ```bash
 gcloud run jobs create spanner-loadtest \
@@ -193,12 +196,22 @@ gcloud run jobs create spanner-loadtest \
 *Note: Ensure `--task-timeout` is greater than your load test `--duration`.*
 
 ### 5. Execute the Load Test
-Run the job. You can override arguments (e.g., to increase concurrency or change strategy) using the `--args` flag.
+Trigger an execution run of the job.
 
-**Example: Run with 200 Total Threads**
-(50 threads per task * 4 tasks)
+#### Option A: Run with Default Arguments (Recommended)
+By default, executions automatically inherit the target project, instance, database, threads, and strategy configured in step 4. No `--args` are needed:
 
 ```bash
+gcloud run jobs execute spanner-loadtest \
+  --region ${REGION} \
+  --tasks 4
+```
+
+#### Option B: Temporary Argument Overrides (Optional)
+If you want to run a one-off test with a different strategy (e.g. `HOTSPOT`) or duration without updating the base job template, pass `--args` to `execute`:
+
+```bash
+# Example: Run with 200 Total Threads (50 threads per task * 4 tasks) with HOTSPOT strategy
 gcloud run jobs execute spanner-loadtest \
   --region ${REGION} \
   --tasks 4 \
@@ -206,7 +219,20 @@ gcloud run jobs execute spanner-loadtest \
   --args="-p,${PROJECT_ID},-i,${SPANNER_INSTANCE},-d,${SPANNER_DATABASE},-c,50,-s,HOTSPOT,--duration,300"
 ```
 
-### 6. Update Configuration (Resources)
+### 6. High-Scale / Distributed Execution (`launch_jobs.sh`)
+For massive distributed load testing across multiple parallel executions, use the included [`launch_jobs.sh`](launch_jobs.sh) script. It fires multiple asynchronous Cloud Run Job executions concurrently:
+
+```bash
+# Trigger 8 executions of 10 tasks each = 80 concurrent containers
+./launch_jobs.sh
+```
+
+You can customize the execution scale via environment variables:
+```bash
+NUM_EXECUTIONS=4 TASKS_PER_EXECUTION=25 REGION=us-central1 ./launch_jobs.sh
+```
+
+### 7. Update Configuration (Resources)
 To change the CPU or Memory limits for an existing job:
 ```bash
 gcloud run jobs update spanner-loadtest \

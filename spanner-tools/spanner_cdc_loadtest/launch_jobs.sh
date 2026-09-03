@@ -14,18 +14,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Ensure REGION is set; defaults to us-central1 if empty
+# Configuration with sensible defaults (can be overridden via environment variables)
+JOB_NAME="${JOB_NAME:-spanner-loadtest}"
 REGION="${REGION:-us-central1}"
+NUM_EXECUTIONS="${NUM_EXECUTIONS:-8}"
+TASKS_PER_EXECUTION="${TASKS_PER_EXECUTION:-10}"
 
-echo "Launching 8 instances of the Spanner load test in ${REGION}..."
+TOTAL_TASKS=$((NUM_EXECUTIONS * TASKS_PER_EXECUTION))
 
-for i in {1..80}
+echo "================================================================="
+echo "Cloud Run Job:          ${JOB_NAME}"
+echo "Region:                 ${REGION}"
+echo "Number of Executions:   ${NUM_EXECUTIONS}"
+echo "Tasks per Execution:    ${TASKS_PER_EXECUTION}"
+echo "Total Concurrent Tasks: ${TOTAL_TASKS}"
+echo "Note: Executions inherit default arguments configured during"
+echo "      'gcloud run jobs create'."
+echo "================================================================="
+
+for ((i=1; i<=NUM_EXECUTIONS; i++))
 do
-   echo "Starting job execution #$i..."
-   gcloud run jobs execute spanner-loadtest --region "${REGION}" --tasks 100 &
+   echo "Triggering job execution #${i} of ${NUM_EXECUTIONS} (${TASKS_PER_EXECUTION} tasks)..."
+   gcloud run jobs execute "${JOB_NAME}" --region "${REGION}" --tasks "${TASKS_PER_EXECUTION}" &
 done
 
-# Wait for all background processes to finish (optional)
+# Wait for all background initiation processes to finish
 wait
 
-echo "All jobs have been triggered."
+echo "All ${NUM_EXECUTIONS} job execution(s) triggered successfully."
