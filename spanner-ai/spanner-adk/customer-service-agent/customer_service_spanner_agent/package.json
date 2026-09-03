@@ -55,7 +55,7 @@
     "@babel/plugin-transform-modules-systemjs": "7.29.4",
     "picomatch@<3": "2.3.2",
     "picomatch@>=4 <5": "4.0.4",
-    "postcss": "8.5.10",
+    "postcss": "8.5.23",
     "js-yaml": "4.2.0",
     "@babel/core": "7.29.7"
   }
