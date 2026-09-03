@@ -42,9 +42,6 @@ public class Main implements Callable<Integer> {
     @Option(names = {"-s", "--strategy"}, description = "Load strategy: ${COMPLETION-CANDIDATES} (default: RANDOM)")
     private LoadGenerator.Strategy strategy = LoadGenerator.Strategy.RANDOM;
 
-    @Option(names = {"--create-schema"}, description = "Create schema if not exists (default: false)")
-    private boolean createSchema = false;
-
     public static void main(String[] args) {
         int exitCode = new CommandLine(new Main()).execute(args);
         System.exit(exitCode);
@@ -55,7 +52,7 @@ public class Main implements Callable<Integer> {
         System.out.printf("Starting load test on %s/%s/%s with %d threads, strategy %s for %d seconds...%n",
             projectId, instanceId, databaseId, concurrency, strategy, duration);
             
-        LoadGenerator generator = new LoadGenerator(projectId, instanceId, databaseId, concurrency, strategy, duration, createSchema);
+        LoadGenerator generator = new LoadGenerator(projectId, instanceId, databaseId, concurrency, strategy, duration);
         generator.run();
         
         return 0;

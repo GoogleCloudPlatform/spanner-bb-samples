@@ -1,5 +1,3 @@
-#!/bin/bash
-#
 # Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,18 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Ensure REGION is set; defaults to us-central1 if empty
-REGION="${REGION:-us-central1}"
-
-echo "Launching 8 instances of the Spanner load test in ${REGION}..."
-
-for i in {1..80}
-do
-   echo "Starting job execution #$i..."
-   gcloud run jobs execute spanner-loadtest --region "${REGION}" --tasks 100 &
-done
-
-# Wait for all background processes to finish (optional)
-wait
-
-echo "All jobs have been triggered."
+terraform {
+  required_version = ">= 1.3"
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.30.0"
+    }
+  }
+}

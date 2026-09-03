@@ -48,33 +48,26 @@ public class LoadGenerator {
   private final int concurrency;
   private final Strategy strategy;
   private final int durationSeconds;
-  private final boolean createSchema;
 
   private final AtomicLong distinctOps = new AtomicLong(0);
 
-  public LoadGenerator(String projectId, String instanceId, String databaseId, int concurrency, Strategy strategy, int durationSeconds, boolean createSchema) {
+  public LoadGenerator(String projectId, String instanceId, String databaseId, int concurrency, Strategy strategy, int durationSeconds) {
     this.projectId = projectId;
     this.instanceId = instanceId;
     this.databaseId = databaseId;
     this.concurrency = concurrency;
     this.strategy = strategy;
     this.durationSeconds = durationSeconds;
-    this.createSchema = createSchema;
   }
 
   public void run() {
     SpannerOptions options = SpannerOptions.newBuilder().setProjectId(projectId).build();
     try (Spanner spanner = options.getService()) {
-      // 1. Ensure Schema
-      if (createSchema) {
-          Schema.createTableIfNotExists(spanner, projectId, instanceId, databaseId);
-      }
-
-      // 2. Create Client
+      // 1. Create Client
       DatabaseId db = DatabaseId.of(projectId, instanceId, databaseId);
       DatabaseClient dbClient = spanner.getDatabaseClient(db);
 
-      // 3. Prepare Workers
+      // 2. Prepare Workers
       ExecutorService executor = Executors.newFixedThreadPool(concurrency);
       List<Worker> workers = new ArrayList<>();
       
@@ -101,7 +94,7 @@ public class LoadGenerator {
         workers.add(worker);
       }
 
-      // 4. Run Loop
+      // 3. Run Loop
       long endTime = System.currentTimeMillis() + (durationSeconds * 1000L);
       
       for (Worker w : workers) {
@@ -112,7 +105,7 @@ public class LoadGenerator {
           });
       }
 
-      // 5. Monitor
+      // 4. Monitor
       long lastOps = 0;
       long startTime = System.currentTimeMillis();
       while (System.currentTimeMillis() < endTime) {
@@ -128,7 +121,7 @@ public class LoadGenerator {
         }
       }
 
-      // 6. Shutdown
+      // 5. Shutdown
       executor.shutdownNow();
       try {
         executor.awaitTermination(5, TimeUnit.SECONDS);

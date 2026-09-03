@@ -1,4 +1,8 @@
+[Back to Spanner Tools](../README.md)
+
 # Cloud Spanner CDC Load Test
+
+> **Disclaimer**: This tool is provided "as-is" for development, testing, and debugging purposes. It is **not** intended for critical production workloads or strict SLA environments. Use at your own risk.
 
 A Java-based load generator for Cloud Spanner, designed to test Change Data Capture (CDC) and general database performance. It supports various strategies to simulate different types of load.
 
@@ -15,17 +19,90 @@ A Java-based load generator for Cloud Spanner, designed to test Change Data Capt
 | **READ_HEAVY** | 90% Read (point lookup), 10% Insert. Maintains local cache of 10k recent keys. |
 | **MIXED** | Cycles through all the above strategies across workers. |
 
-## Local Usage
+## Workflow Overview
+
+1. **[Infrastructure Setup](#1-infrastructure-setup)**: Provision Spanner instance(s), database, and change stream options using Terraform (or manual DDL).
+2. **[Build Application](#2-build)**: Compile the load generator JAR.
+3. **[Run Load Test](#3-local-usage)**: Run locally or deploy to **[Cloud Run Jobs](#4-cloud-run-jobs-deployment)** for distributed load generation.
+
+---
+
+## 1. Infrastructure Setup
+
+### Option A: Using Terraform (Recommended)
+
+A lightweight Terraform module is provided in the [`terraform/`](terraform/) directory to spin up Spanner instances, databases, tables, and change streams with backups disabled.
+
+```bash
+cd terraform
+cp terraform.tfvars.example terraform.tfvars
+```
+
+Edit `terraform.tfvars`. Here is a complete, clean example with all available options:
+
+```hcl
+project_id          = "your-project-id"
+region              = "us-central1"
+instance_config     = "regional-us-central1"
+instance_prefix     = "spanner-loadtest"
+processing_units    = 1000
+database_id         = "loadtest-db"
+deletion_protection = false
+change_streams      = ["OLD_AND_NEW_VALUES"]
+```
+
+#### Change Stream Scenarios
+Configure `change_streams` to control which instance(s) get provisioned:
+- **1 Instance with standard Change Stream (Default)**: `change_streams = ["OLD_AND_NEW_VALUES"]`
+- **1 Instance WITHOUT Change Stream**: `change_streams = ["NONE"]`
+- **2 Instances (Baseline vs CDC)**: `change_streams = ["NONE", "OLD_AND_NEW_VALUES"]`
+- **All Options**: `change_streams = ["NONE", "OLD_AND_NEW_VALUES", "NEW_VALUES", "NEW_ROW", "NEW_ROW_AND_OLD_VALUES"]`
+
+Deploy the infrastructure:
+```bash
+terraform init
+terraform apply
+```
+
+The output will display the provisioned instance IDs, database IDs, and ready-to-run load test commands.
+
+### Option B: Manual Setup (Existing Database)
+
+If you prefer to use an existing database or create schema manually, execute the following DDL in Cloud Console (Spanner Studio) or via `gcloud`:
+
+```sql
+CREATE TABLE LoadTestTable (
+    Id STRING(36) NOT NULL,
+    Data STRING(MAX),
+    Counter INT64,
+    IsActive BOOL,
+    ExampleTimestamp TIMESTAMP OPTIONS (allow_commit_timestamp=true)
+) PRIMARY KEY (Id);
+
+-- Optional: Create Change Stream (select desired value_capture_type, or omit entirely)
+CREATE CHANGE STREAM LoadTestStream FOR LoadTestTable
+OPTIONS (
+  value_capture_type = 'OLD_AND_NEW_VALUES', -- Options: 'OLD_AND_NEW_VALUES', 'NEW_VALUES', 'NEW_ROW', 'NEW_ROW_AND_OLD_VALUES'
+  retention_period = '1d'
+);
+```
+
+---
+
+## 2. Build
 
 ### Prerequisites
 - Java 17+
 - Maven 3.8+
 - Google Cloud SDK (`gcloud`)
 
-### Build
 ```bash
 mvn clean package -DskipTests
 ```
+
+---
+
+## 3. Local Usage
 
 ### Command-Line Options
 
@@ -37,7 +114,6 @@ mvn clean package -DskipTests
 | `-c` | `--concurrency` | No | `10` | Number of concurrent worker threads |
 | `-s` | `--strategy` | No | `RANDOM` | Load strategy (`RANDOM`, `SEQUENTIAL`, `HOTSPOT`, `ATOMICITY`, `SATURATION`, `INTEGRITY`, `READ_HEAVY`, `MIXED`). See [Strategies](#strategies). |
 | | `--duration` | No | `60` | Duration of test in seconds |
-| | `--create-schema` | No | `false` | Automatically creates target table (`LoadTestTable`) if it does not exist |
 | `-h` | `--help` | No | — | Show help message and exit |
 | `-V` | `--version` | No | — | Print version information and exit |
 
@@ -58,8 +134,7 @@ java -jar target/spanner-cdc-loadtest-1.0-SNAPSHOT.jar \
   -d "${SPANNER_DATABASE}" \
   -c 10 \
   -s MIXED \
-  --duration 60 \
-  --create-schema
+  --duration 60
 ```
 
 **Run with defaults (10 threads, RANDOM strategy, 60s duration):**
@@ -69,11 +144,10 @@ java -jar target/spanner-cdc-loadtest-1.0-SNAPSHOT.jar \
   -i "${SPANNER_INSTANCE}" \
   -d "${SPANNER_DATABASE}"
 ```
-*Note: Schema creation is disabled by default. Pass `--create-schema` on initial run to automatically create the table schema.*
 
 ---
 
-## Cloud Run Jobs Deployment
+## 4. Cloud Run Jobs Deployment
 
 Run massive load tests serverlessly using Cloud Run Jobs.
 
@@ -151,7 +225,7 @@ Rates are billed per vCPU-second and GB-second for each task.
 
 ---
 
-## End-to-End Quickstart
+## 5. End-to-End Cloud Run Quickstart
 
 ### Variables
 ```bash

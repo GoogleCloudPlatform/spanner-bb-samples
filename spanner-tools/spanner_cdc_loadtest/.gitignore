@@ -1,0 +1,24 @@
+# Java & Maven
+target/
+*.class
+dependency-reduced-pom.xml
+.DS_Store
+*.log
+
+# Terraform local configurations & user variables
+terraform/*.tfvars
+terraform/*.tfvars.json
+!terraform/*.tfvars.example
+
+# Terraform cache & plugins
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+
+# Terraform state files
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/.terraform.tfstate.lock.info
+
+# Crash logs
+terraform/crash.log
+terraform/crash.*.log

@@ -1,0 +1,56 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Google Cloud Project ID (Required)
+project_id = "your-project-id"
+
+# Region for regional instance configuration (Default: us-central1)
+# region          = "us-central1"
+# instance_config = "regional-us-central1"
+
+# Compute capacity in Processing Units per instance
+# Default: 1000 PUs (1 full Node)
+# Set to 100 PUs for lightweight / budget-friendly dev and testing
+processing_units = 1000
+
+# -------------------------------------------------------------------------------------------------
+# Change Stream Deployment Options
+# -------------------------------------------------------------------------------------------------
+# Choose which instance(s) to create by listing the desired change stream mode(s):
+# Available options:
+#   - "OLD_AND_NEW_VALUES" (Cloud Spanner default)
+#   - "NEW_VALUES"
+#   - "NEW_ROW"
+#   - "NEW_ROW_AND_OLD_VALUES"
+#   - "NONE" (No change stream created)
+#
+# Backups are explicitly disabled across all instances.
+
+# Example 1: Spin up just ONE instance with standard change stream (Default)
+change_streams = ["OLD_AND_NEW_VALUES"]
+
+# Example 2: Spin up just ONE instance WITHOUT any change stream
+# change_streams = ["NONE"]
+
+# Example 3: Spin up TWO instances to compare baseline vs CDC overhead
+# change_streams = ["NONE", "OLD_AND_NEW_VALUES"]
+
+# Example 4: Spin up all 5 options for complete benchmark comparison
+# change_streams = [
+#   "NONE",
+#   "OLD_AND_NEW_VALUES",
+#   "NEW_VALUES",
+#   "NEW_ROW",
+#   "NEW_ROW_AND_OLD_VALUES"
+# ]
