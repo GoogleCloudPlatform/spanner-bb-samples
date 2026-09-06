@@ -95,7 +95,8 @@ def main():
         "backend.app.main:app",
         host=args.host,
         port=args.port,
-        reload=args.reload
+        reload=args.reload,
+        reload_dirs=[str(base_dir / "backend" / "app")] if args.reload else None,
     )
 
 if __name__ == "__main__":

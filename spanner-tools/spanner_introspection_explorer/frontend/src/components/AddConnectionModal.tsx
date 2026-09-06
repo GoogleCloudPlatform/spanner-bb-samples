@@ -26,22 +26,13 @@ import {
   Typography,
   TextField,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   CircularProgress,
   Alert,
   Autocomplete,
   createFilterOptions,
   IconButton,
   Tooltip,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
   Chip,
-  Paper,
-  Divider,
 } from '@mui/material';
 import CloudQueueIcon from '@mui/icons-material/CloudQueue';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
@@ -123,7 +114,9 @@ export const AddConnectionModal: React.FC<AddConnectionModalProps> = ({
   }, [open]);
 
   const loadProjects = async (refresh = false) => {
-    setLoadingProjects(true);
+    if (projects.length === 0 || refresh) {
+      setLoadingProjects(true);
+    }
     try {
       const res = await api.getGcpProjects(refresh);
       setProjects(res);
@@ -346,6 +339,12 @@ export const AddConnectionModal: React.FC<AddConnectionModalProps> = ({
                     handleSelectProject(val, false);
                   }
                 }}
+                onInputChange={(_, val, reason) => {
+                  if (reason === 'input') {
+                    const match = projects.find((p) => p.project_id === val);
+                    handleSelectProject(match || (val ? { project_id: val, name: val } : null), false);
+                  }
+                }}
                 loading={loadingProjects}
                 freeSolo
                 renderInput={(params) => (
@@ -544,33 +543,69 @@ export const AddConnectionModal: React.FC<AddConnectionModalProps> = ({
 
             {/* Staging Directory Selector */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <FormControl size="small" fullWidth>
-                <InputLabel>Staging Folder Directory</InputLabel>
-                <Select
-                  value={selectedStagingPath}
-                  label="Staging Folder Directory"
-                  onChange={(e) => {
-                    setSelectedStagingPath(e.target.value);
-                    const folder = stagingFolders.find((f) => f.path === e.target.value);
-                    if (folder && !connectionName) {
-                      setConnectionName(folder.name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()));
+              <Autocomplete
+                size="small"
+                fullWidth
+                freeSolo
+                options={stagingFolders.map((f) => f.path)}
+                value={selectedStagingPath}
+                onChange={(_, val) => {
+                  const p = typeof val === 'string' ? val : '';
+                  setSelectedStagingPath(p);
+                  const folder = stagingFolders.find((f) => f.path === p);
+                  if (folder && !connectionName) {
+                    setConnectionName(folder.name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()));
+                  }
+                }}
+                onInputChange={(_, val, reason) => {
+                  if (reason === 'input') {
+                    setSelectedStagingPath(val);
+                    const folderName = val.split('/').filter(Boolean).pop();
+                    if (folderName && !connectionName) {
+                      setConnectionName(folderName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()));
                     }
-                  }}
-                >
-                  {stagingFolders.map((f) => (
-                    <MenuItem key={f.path} value={f.path}>
+                  }
+                }}
+                loading={loadingStaging}
+                renderOption={(props, option) => {
+                  const folder = stagingFolders.find((f) => f.path === option);
+                  return (
+                    <li {...props} key={option}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                        <span>{f.path}</span>
-                        <Chip
-                          size="small"
-                          label={`${f.csv_count} CSVs (${f.total_size_mb} MB)`}
-                          sx={{ height: 20, fontSize: '0.7rem' }}
-                        />
+                        <span>{option}</span>
+                        {folder && (
+                          <Chip
+                            size="small"
+                            label={`${folder.csv_count} CSVs (${folder.total_size_mb} MB)`}
+                            sx={{ height: 20, fontSize: '0.7rem' }}
+                          />
+                        )}
                       </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                    </li>
+                  );
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Staging Folder Directory"
+                    placeholder="Select existing folder or enter path (e.g. staging/my-export)..."
+                    helperText={
+                      !loadingStaging && stagingFolders.length === 0
+                        ? 'No subdirectories currently found in staging/. You can enter a directory path manually.'
+                        : 'Select a discovered folder or enter a custom path'
+                    }
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {loadingStaging ? <CircularProgress size={16} /> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+              />
               <Tooltip title="Scan Staging Folders">
                 <IconButton
                   size="small"
@@ -582,17 +617,6 @@ export const AddConnectionModal: React.FC<AddConnectionModalProps> = ({
                 </IconButton>
               </Tooltip>
             </Box>
-
-            {/* Custom Path Input if desired */}
-            <TextField
-              label="Or Custom Directory Path"
-              size="small"
-              fullWidth
-              placeholder="staging/my-database"
-              value={selectedStagingPath}
-              onChange={(e) => setSelectedStagingPath(e.target.value)}
-              helperText="Folder must contain export_all_*.csv files"
-            />
           </Box>
         )}
       </DialogContent>

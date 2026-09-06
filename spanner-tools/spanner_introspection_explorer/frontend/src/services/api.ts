@@ -43,6 +43,9 @@ const client = axios.create({
   },
 });
 
+let cachedGcpProjects: GcpProjectItem[] | null = null;
+let gcpProjectsPromise: Promise<GcpProjectItem[]> | null = null;
+
 export const api = {
   async getAvailableDatabases(): Promise<DatabasesResponse> {
     const res = await client.get<DatabasesResponse>('/tables/meta/databases');
@@ -207,10 +210,23 @@ export const api = {
 
   // GCP Discovery & Connectivity
   async getGcpProjects(refresh = false): Promise<GcpProjectItem[]> {
-    const res = await client.get<GcpProjectItem[]>('/gcp/projects', {
+    if (!refresh && cachedGcpProjects) {
+      return cachedGcpProjects;
+    }
+    if (!refresh && gcpProjectsPromise) {
+      return gcpProjectsPromise;
+    }
+    gcpProjectsPromise = client.get<GcpProjectItem[]>('/gcp/projects', {
       params: { refresh }
+    }).then((res) => {
+      cachedGcpProjects = res.data;
+      gcpProjectsPromise = null;
+      return res.data;
+    }).catch((err) => {
+      gcpProjectsPromise = null;
+      throw err;
     });
-    return res.data;
+    return gcpProjectsPromise;
   },
 
   async getGcpInstances(projectId: string, refresh = false): Promise<GcpInstanceItem[]> {

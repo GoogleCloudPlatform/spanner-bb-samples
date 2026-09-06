@@ -26,7 +26,8 @@ from .spanner_queries import GSQL_INTROSPECTION_QUERIES, PG_INTROSPECTION_QUERIE
 
 logger = logging.getLogger(__name__)
 
-CACHE_DIR = Path("backend/data/cache")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+CACHE_DIR = PROJECT_ROOT / "backend" / "data" / "cache" if (PROJECT_ROOT / "backend").exists() else Path("backend/data/cache")
 PROJECTS_CACHE_FILE = CACHE_DIR / "gcp_projects.json"
 
 class GcpDiscoveryService:

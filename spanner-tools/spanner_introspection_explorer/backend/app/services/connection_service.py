@@ -29,8 +29,9 @@ from .gcp_service import GcpDiscoveryService
 
 logger = logging.getLogger(__name__)
 
-CONNECTIONS_FILE = Path("backend/data/connections.json")
-STAGING_DIR = Path("staging")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+CONNECTIONS_FILE = PROJECT_ROOT / "backend" / "data" / "connections.json" if (PROJECT_ROOT / "backend").exists() else Path("backend/data/connections.json")
+STAGING_DIR = PROJECT_ROOT / "staging" if (PROJECT_ROOT / "staging").exists() else Path("staging")
 DBS_DIR = Path(DATABASE_BASE_DIR)
 
 def slugify(text: str) -> str:
@@ -186,8 +187,11 @@ class ConnectionService:
                     logger.warning(f"Failed to delete duckdb file {duckdb_path}: {e}")
 
         if delete_staging:
-            staging_path = conn.get("staging_path") or f"staging/{connection_id}"
-            if staging_path and Path(staging_path).exists():
+            staging_raw = conn.get("staging_path") or f"staging/{connection_id}"
+            staging_path = Path(staging_raw)
+            if not staging_path.is_absolute() and not staging_path.exists() and (PROJECT_ROOT / staging_path).exists():
+                staging_path = PROJECT_ROOT / staging_path
+            if staging_path and staging_path.exists():
                 try:
                     shutil.rmtree(staging_path)
                 except Exception as e:
@@ -209,9 +213,13 @@ class ConnectionService:
                 has_schema = (p / "schema.sql").exists()
                 total_bytes = sum(f.stat().st_size for f in csvs)
                 total_mb = round(total_bytes / (1024 * 1024), 2)
+                try:
+                    display_path = str(p.relative_to(PROJECT_ROOT))
+                except ValueError:
+                    display_path = str(p)
                 items.append(StagingFolderItem(
                     name=p.name,
-                    path=str(p),
+                    path=display_path,
                     csv_count=len(csvs),
                     has_schema=has_schema,
                     total_size_mb=total_mb
@@ -229,7 +237,10 @@ class ConnectionService:
         if not conn:
             raise ValueError(f"Connection '{connection_id}' not found")
 
-        staging_dir = Path(conn.staging_path or f"staging/{conn.id}")
+        staging_raw = conn.staging_path or f"staging/{conn.id}"
+        staging_dir = Path(staging_raw)
+        if not staging_dir.is_absolute() and not staging_dir.exists() and (PROJECT_ROOT / staging_dir).exists():
+            staging_dir = PROJECT_ROOT / staging_dir
         duckdb_path = Path(conn.duckdb_path)
         duckdb_path.parent.mkdir(parents=True, exist_ok=True)
 

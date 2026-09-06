@@ -88,6 +88,8 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     loadData();
+    // Preload full GCP project list in background so modal opens instantly
+    api.getGcpProjects(false).catch(() => {});
   }, []);
 
   const handleSelectView = (databaseId: string, view: string, table?: string) => {
